@@ -44,12 +44,11 @@ class SocialNCE():
         #       (Use this block to visualize the raw data)
         # -----------------------------------------------------
 
-        for i in range(batch_split.shape[0] - 1):
-            traj_primary = batch_scene[:, batch_split[i]] # [time, 2]
-            traj_neighbor = batch_scene[:, batch_split[i]+1:batch_split[i+1]] # [time, num, 2]
-            plot_scene(traj_primary, traj_neighbor, fname='scene_{:d}.png'.format(i))
-        print(self.noise_local)
-        import pdb; pdb.set_trace()
+        #for i in range(batch_split.shape[0] - 1):
+        #    traj_primary = batch_scene[:, batch_split[i]] # [time, 2]
+        #    traj_neighbor = batch_scene[:, batch_split[i]+1:batch_split[i+1]] # [time, num, 2]
+        #    plot_scene(traj_primary, traj_neighbor, fname='scene_{:d}.png'.format(i))
+        #import pdb; pdb.set_trace()
 
         # #####################################################
         #           TODO: fill the following code
@@ -58,29 +57,20 @@ class SocialNCE():
         # -----------------------------------------------------
         #               Contrastive Sampling 
         # -----------------------------------------------------
-        (sample_pos, sample_neg) = self._sampling_spatial(batch_scene, batch_split)
+        sample_pos, sample_neg = self._sampling_spatial(batch_scene, batch_split)
+        
+        # nan treatment
+        nan_detect_neg=torch.isnan(sample_neg)
+        sample_neg[nan_detect_neg]=0
+        
         # -----------------------------------------------------
         #              Lower-dimensional Embedding 
         # -----------------------------------------------------
         
-        # interestsID = batch_split[0:-1] #to erase
-        
-        # ------------------------ to erase ------------------
-        # embedding
-        #emb_obsv = self.head_projection(feat[:, :, :1])
-        #emb_pos = self.encoder_sample(candidate_pos, time_pos[:, :, None])
-        #emb_neg = self.encoder_sample(candidate_neg, time_neg[:, :, :, None])
-        # ------------------------ to erase end ------------------
-        emb_obsv = self.head_projection(batch_feat[self.obs_length,batch_split,:]) #comprendre come ça marche le head_projection et encoder_sample
+        emb_obsv = self.head_projection(batch_feat[:,batch_split[:-1],:])
         emb_pos = self.encoder_sample(sample_pos)
-        emb_neg = self.encoder_sample(torch.tensor(sample_neg))
+        emb_neg = self.encoder_sample(sample_neg)
         
-        # ------------------------ to erase ------------------
-        # normalization
-        #query = nn.functional.normalize(emb_obsv, dim=-1)
-        #key_pos = nn.functional.normalize(emb_pos, dim=-1)
-        #key_neg = nn.functional.normalize(emb_neg, dim=-1)
-        # ------------------------ to erase end ------------------
         query = nn.functional.normalize(emb_obsv, dim=-1)
         key_pos = nn.functional.normalize(emb_pos, dim=-1)
         key_neg = nn.functional.normalize(emb_neg, dim=-1)
@@ -89,34 +79,19 @@ class SocialNCE():
         #                   Compute Similarity 
         # -----------------------------------------------------
         
-        # similarity
-        #sim_pos = (query * key_pos.unsqueeze(1)).sum(dim=-1)
-        #sim_neg = (query.unsqueeze(2) * key_neg.unsqueeze(1)).sum(dim=-1)
-        sim_pos = (query[:,None,:] * key_pos.unsqueeze[ :,None,:]).sum(dim=-1) #pdf 3.1 -> que est ce que sont les dimension de query, key_neg, key_pos
-        sim_neg = (query.unsqueeze[:,None,:] * key_neg).sum(dim=-1)
+        sim_pos = (query[0:self.horizon] * key_pos).sum(dim=-1)
+        sim_neg = (query[0:self.horizon].unsqueeze(2) * key_neg.unsqueeze(1)).sum(dim=-1)
         
-        # !!! gerer les nan !!!
-        # !!! start from LSTM trained last time !!!
+        sim_pos = sim_pos.reshape(sim_pos.shape[0]*sim_pos.shape[1],-1)
+        sim_neg = sim_neg.reshape(sim_neg.shape[0]*sim_neg.shape[1],-1)
         
-        # logits
-        #sim_pos_avg = sim_pos.mean(axis=1)              # average over samples
-        #sz_neg = sim_neg.size()
-        #sim_neg_flat = sim_neg.view(sz_neg[0], sz_neg[1]*sz_neg[2], sz_neg[3])
-        #logits = torch.cat([sim_pos_avg.view(sz_neg[0]*sz_neg[3], 1), sim_neg_flat.view(
-        #    sz_neg[0]*sz_neg[3], sz_neg[1]*sz_neg[2])], dim=1) / self.temperature
         logits = torch.cat([sim_pos, sim_neg], dim=-1) / self.temperature
-
         
         # -----------------------------------------------------
         #                       NCE Loss 
         # -----------------------------------------------------
-        
-        # loss
-        #labels = torch.zeros(logits.size(0), dtype=torch.long, device=logits.device)
-        #loss = self.criterion(logits, labels)
         labels = torch.zeros(logits.size(0), dtype=torch.long)
         loss = self.criterion(logits, labels)
-        print('the contrast loss is: ', loss)
         
         return loss
 
@@ -126,7 +101,7 @@ class SocialNCE():
         '''
         raise ValueError("Optional")
 
-    def _sampling_spatial(self, batch_scene, batch_split, min_dist_ba, c_eps):
+    def _sampling_spatial(self, batch_scene, batch_split):
 
         gt_future = batch_scene[self.obs_length: self.obs_length+self.pred_length]
 
@@ -134,26 +109,25 @@ class SocialNCE():
         #           TODO: fill the following code
         # #####################################################
         
-        gt_primary = gt_future[:, batch_split[i]] # [pred_length, 2]
-        gt_neighbor = gt_future[:, batch_split[i]+1:batch_split[i+1]] # [pred_length, num, 2]
-
+        
         # -----------------------------------------------------
         #                  Positive Samples
         # -----------------------------------------------------
-        
-        epsilon_pos = torch.rand(gt_primary.size())*c_eps
-        sample_pos = gt_primary + epsilon_pos
+        gt_primary = gt_future[0:self.horizon, batch_split[0:batch_split.shape[0] - 1], :]
+        sample_pos=gt_primary+torch.randn(gt_primary.size())*0.05
 
         # -----------------------------------------------------
         #                  Negative Samples
         # -----------------------------------------------------
-        
-        epsilon_neg = torch.rand(gt_neighbor.size())*c_eps
-       # theta =
-    # delta_s = torch.ones((gt_neighbor.size(0),gt_neighbor.size(1)*8,gt_neighbor.size(2)))*min_dist_ba
-        
-        sample_pos = gt_neighbor + 10
+        coll_zone = gt_future[0:self.horizon, batch_split[0]+1:batch_split[1]]
+        for i in range(1,batch_split.shape[0] - 1):
+            coll_zone=torch.cat((coll_zone, gt_future[0:self.horizon, batch_split[i]+1:batch_split[i+1]]),dim=1)
 
+        sample_neg=coll_zone.unsqueeze(2)+self.agent_zone.unsqueeze(0).unsqueeze(0)
+        sample_neg=sample_neg.reshape(sample_neg.size(0), sample_neg.size(1) * sample_neg.size(2), 2)
+
+        sample_neg=sample_neg+torch.randn(sample_neg.size())*0.05
+        
         # -----------------------------------------------------
         #       Remove negatives that are too hard (optional)
         # -----------------------------------------------------
