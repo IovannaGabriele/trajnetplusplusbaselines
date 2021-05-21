@@ -23,7 +23,7 @@ The negative sampling strategy constructs negative events based on the regions o
 
 This diagram graphically summarizes the structure used to code social contrastive learning.
 After having generated the negative and positive samples as explained above, we then have defined the forecasting model that are designed as encoder-decoder neural networks, where the motion encoder first extracts a compact representation hit with respect to the different agent and the decoder subsequently rolls out its future trajectory. We were there able to construct the encoded query and key vectors for the primary agent at each time t. Thank to the features we have extracted we have computed. One of the last thing to do was to train the parametric models jointly with the objective of mapping the positive pair of query and keys to the similar points, relative to the other negative pairs, in the embedding space. To finish we have computed the total loss of our model, which is the sum of the trajectory forecasting and social contrastive loss that we want to minimize.
-Once we implemented social contrastive learning we train on real data and synth data using 30 epochs and a weight of 1 and 4 for contrastive learning. Next we tested our models and uploaded them to AIcrowd. Below is the result for the contrastive weight of 1:
+Once we implemented social contrastive learning we train on real data and synth data using 25 epochs and a weight of 1 and 4 for contrastive learning. Next we tested our models and uploaded them to AIcrowd. Below is the result for the contrastive weight of 1:
 
 .. figure:: docs/train/img7.png
 
