@@ -1,4 +1,4 @@
-superiority of D-Grid compare to vanilla
+Milestone 1, superiority of D-Grid compare to vanilla
 ========================================
 
 .. figure:: docs/train/1img.png
