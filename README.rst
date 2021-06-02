@@ -72,9 +72,7 @@ The discriminator is trained to correctly classify true and false images.
 
 It does this by maximizing the logarithm of the predicted probability of true images and the logarithm of the inverted probability of false images, averaged over each mini-batch of examples. We use the sum of the log probabilities to deal with higher values and avoid divergence (the loss function will therefore be closer to 1 than from 0 by multiplying the probabilities closed to 0).
 
-Once the discriminator is trained, it allows to select among the multimodal alternatives corresponding to a user the most credible ones in order to obtain better results
-
-
+Once the discriminator is trained, it allows to select among the multimodal alternatives corresponding to a user the most credible ones in order to obtain better results.
 
 Results summary:
 ========================================
