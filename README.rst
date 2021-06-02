@@ -40,4 +40,4 @@ Below is the DGrid result without contrastive learning:
 As we can see the overall value of FDE is better for DGrig model. This can be related either to the fact that we were not able to preload the old model and train with the contrastive learning from the old hyperparameters. However in the case in which we choose a weight of 4 for the social contrastive we notice that the number of collisions is lower than the DGrid value. We see that the social contrastive with a weight of 4 has a positive effect on the number of collisions and therefore it takes into account the points around the neighbors that if it is reached could lead to a collision. To see better results for the contrastive learning we should train the models starting from the hyperparameters obtained with the DGrid model in order to start from an already good model.
 
 
-.. figure:: docs/train/comparison.jpeg
+.. figure:: docs/train/comparison2.jpeg
